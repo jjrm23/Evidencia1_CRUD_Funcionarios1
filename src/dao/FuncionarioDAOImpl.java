@@ -2,109 +2,193 @@ package dao;
 
 import model.Funcionario;
 import java.sql.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class FuncionarioDAOImpl implements FuncionarioDAO {
 
-    private Connection getConnection() throws SQLException {
-        return DBConnection.getConnection();
-    }
+    private static final String SQL_INSERT = "INSERT INTO funcionario (nombre, apellido, numero_documento, fecha_nacimiento, direccion, telefono, email, id_tipo_documento, id_estado_civil) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    private static final String SQL_SELECT_ALL = "SELECT * FROM funcionario";
+    private static final String SQL_SELECT_BY_ID = "SELECT * FROM funcionario WHERE id_funcionario = ?";
+    private static final String SQL_UPDATE = "UPDATE funcionario SET nombre=?, apellido=?, numero_documento=?, fecha_nacimiento=?, direccion=?, telefono=?, email=?, id_tipo_documento=?, id_estado_civil=? WHERE id_funcionario=?";
+    private static final String SQL_DELETE = "DELETE FROM funcionario WHERE id_funcionario = ?";
 
-    private Funcionario map(ResultSet rs) throws SQLException {
-        Funcionario f = new Funcionario();
-        f.setId(rs.getInt("id_funcionario"));
-        f.setTipoIdentificacion(rs.getString("tipo_identificacion"));
-        f.setNumeroIdentificacion(rs.getString("numero_identificacion"));
-        f.setNombres(rs.getString("nombres"));
-        f.setApellidos(rs.getString("apellidos"));
-        f.setEstadoCivil(rs.getString("estado_civil"));
-        f.setSexo(rs.getString("sexo"));
-        f.setDireccion(rs.getString("direccion"));
-        f.setTelefono(rs.getString("telefono"));
-        Date d = rs.getDate("fecha_nacimiento");
-        if (d != null) f.setFechaNacimiento(d.toLocalDate());
-        return f;
+    @Override
+    public void crear(Funcionario f) throws DataAccessException {
+        Connection conn = null;
+        PreparedStatement stmt = null;
+        
+        try {
+            conn = DBConnection.getConnection();
+            stmt = conn.prepareStatement(SQL_INSERT);
+            
+            stmt.setString(1, f.getNombre());
+            stmt.setString(2, f.getApellido());
+            stmt.setString(3, f.getNumeroDocumento());
+            
+            // Manejo de la Fecha de Nacimiento (LocalDate a java.sql.Date o NULL)
+            if (f.getFechaNacimiento() != null) {
+                stmt.setDate(4, Date.valueOf(f.getFechaNacimiento())); 
+            } else {
+                stmt.setNull(4, java.sql.Types.DATE); 
+            }
+            
+            stmt.setString(5, f.getDireccion());
+            stmt.setString(6, f.getTelefono());
+            stmt.setString(7, f.getEmail());
+            stmt.setInt(8, f.getIdTipoDocumento());
+            stmt.setInt(9, f.getIdEstadoCivil());
+            
+            stmt.executeUpdate();
+            
+        } catch (SQLException e) {
+            throw new DataAccessException("Error al insertar funcionario: " + f.getNombre(), e);
+        } finally {
+            DBConnection.close(stmt);
+            DBConnection.close(conn);
+        }
     }
 
     @Override
     public List<Funcionario> listar() throws DataAccessException {
-        List<Funcionario> lista = new ArrayList<>();
-        String sql = "SELECT * FROM funcionario";
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) lista.add(map(rs));
-        } catch (SQLException e) {
-            throw new DataAccessException("Error al listar funcionarios", e);
-        }
-        return lista;
-    }
+        Connection conn = null;
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+        List<Funcionario> funcionarios = new ArrayList<>();
 
-    @Override
-    public Optional<Funcionario> obtenerPorId(int id) throws DataAccessException {
-        String sql = "SELECT * FROM funcionario WHERE id_funcionario=?";
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, id);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return Optional.of(map(rs));
+        try {
+            conn = DBConnection.getConnection();
+            stmt = conn.prepareStatement(SQL_SELECT_ALL);
+            rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                Funcionario f = new Funcionario();
+                f.setIdFuncionario(rs.getInt("id_funcionario"));
+                f.setNombre(rs.getString("nombre"));
+                f.setApellido(rs.getString("apellido"));
+                f.setNumeroDocumento(rs.getString("numero_documento"));
+                
+                Date sqlDate = rs.getDate("fecha_nacimiento");
+                if (sqlDate != null) {
+                    f.setFechaNacimiento(sqlDate.toLocalDate()); 
+                }
+                
+                f.setDireccion(rs.getString("direccion"));
+                f.setTelefono(rs.getString("telefono"));
+                f.setEmail(rs.getString("email"));
+                f.setIdTipoDocumento(rs.getInt("id_tipo_documento"));
+                f.setIdEstadoCivil(rs.getInt("id_estado_civil"));
+                funcionarios.add(f);
             }
         } catch (SQLException e) {
-            throw new DataAccessException("Error al obtener funcionario", e);
+            throw new DataAccessException("Error al listar funcionarios.", e);
+        } finally {
+            DBConnection.close(rs);
+            DBConnection.close(stmt);
+            DBConnection.close(conn);
         }
-        return Optional.empty();
+        return funcionarios;
     }
-
+    
     @Override
-    public void crear(Funcionario f) throws DataAccessException {
-        String sql = "INSERT INTO funcionario (tipo_identificacion, numero_identificacion, nombres, apellidos, estado_civil, sexo, direccion, telefono, fecha_nacimiento) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, f.getTipoIdentificacion());
-            ps.setString(2, f.getNumeroIdentificacion());
-            ps.setString(3, f.getNombres());
-            ps.setString(4, f.getApellidos());
-            ps.setString(5, f.getEstadoCivil());
-            ps.setString(6, f.getSexo());
-            ps.setString(7, f.getDireccion());
-            ps.setString(8, f.getTelefono());
-            ps.setDate(9, f.getFechaNacimiento() != null ? Date.valueOf(f.getFechaNacimiento()) : null);
-            ps.executeUpdate();
+    public Funcionario obtenerPorId(int id) throws DataAccessException {
+        Connection conn = null;
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+        Funcionario f = null;
+
+        try {
+            conn = DBConnection.getConnection();
+            stmt = conn.prepareStatement(SQL_SELECT_BY_ID);
+            stmt.setInt(1, id);
+            rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                f = new Funcionario();
+                f.setIdFuncionario(rs.getInt("id_funcionario"));
+                f.setNombre(rs.getString("nombre"));
+                f.setApellido(rs.getString("apellido"));
+                f.setNumeroDocumento(rs.getString("numero_documento"));
+                
+                Date sqlDate = rs.getDate("fecha_nacimiento");
+                if (sqlDate != null) {
+                    f.setFechaNacimiento(sqlDate.toLocalDate()); 
+                }
+                
+                f.setDireccion(rs.getString("direccion"));
+                f.setTelefono(rs.getString("telefono"));
+                f.setEmail(rs.getString("email"));
+                f.setIdTipoDocumento(rs.getInt("id_tipo_documento"));
+                f.setIdEstadoCivil(rs.getInt("id_estado_civil"));
+            }
         } catch (SQLException e) {
-            throw new DataAccessException("Error al crear funcionario", e);
+            throw new DataAccessException("Error al buscar funcionario con ID " + id, e);
+        } finally {
+            DBConnection.close(rs);
+            DBConnection.close(stmt);
+            DBConnection.close(conn);
         }
+        return f;
     }
 
     @Override
     public void actualizar(Funcionario f) throws DataAccessException {
-        String sql = "UPDATE funcionario SET tipo_identificacion=?, numero_identificacion=?, nombres=?, apellidos=?, estado_civil=?, sexo=?, direccion=?, telefono=?, fecha_nacimiento=? WHERE id_funcionario=?";
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, f.getTipoIdentificacion());
-            ps.setString(2, f.getNumeroIdentificacion());
-            ps.setString(3, f.getNombres());
-            ps.setString(4, f.getApellidos());
-            ps.setString(5, f.getEstadoCivil());
-            ps.setString(6, f.getSexo());
-            ps.setString(7, f.getDireccion());
-            ps.setString(8, f.getTelefono());
-            ps.setDate(9, f.getFechaNacimiento() != null ? Date.valueOf(f.getFechaNacimiento()) : null);
-            ps.setInt(10, f.getId());
-            ps.executeUpdate();
+        Connection conn = null;
+        PreparedStatement stmt = null;
+        
+        try {
+            conn = DBConnection.getConnection();
+            stmt = conn.prepareStatement(SQL_UPDATE);
+            
+            stmt.setString(1, f.getNombre());
+            stmt.setString(2, f.getApellido());
+            stmt.setString(3, f.getNumeroDocumento());
+            
+            // Manejo de la Fecha de Nacimiento (LocalDate a java.sql.Date o NULL)
+            if (f.getFechaNacimiento() != null) {
+                stmt.setDate(4, Date.valueOf(f.getFechaNacimiento()));
+            } else {
+                stmt.setNull(4, java.sql.Types.DATE); 
+            }
+            
+            stmt.setString(5, f.getDireccion());
+            stmt.setString(6, f.getTelefono());
+            stmt.setString(7, f.getEmail());
+            stmt.setInt(8, f.getIdTipoDocumento());
+            stmt.setInt(9, f.getIdEstadoCivil());
+            stmt.setInt(10, f.getIdFuncionario()); 
+
+            if (stmt.executeUpdate() == 0) {
+                throw new DataAccessException("No se encontró el funcionario con ID: " + f.getIdFuncionario() + " para actualizar.");
+            }
+            
         } catch (SQLException e) {
-            throw new DataAccessException("Error al actualizar funcionario", e);
+            throw new DataAccessException("Error al actualizar funcionario con ID: " + f.getIdFuncionario(), e);
+        } finally {
+            DBConnection.close(stmt);
+            DBConnection.close(conn);
         }
     }
-
+    
     @Override
     public void eliminar(int id) throws DataAccessException {
-        String sql = "DELETE FROM funcionario WHERE id_funcionario=?";
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, id);
-            ps.executeUpdate();
+        Connection conn = null;
+        PreparedStatement stmt = null;
+        
+        try {
+            conn = DBConnection.getConnection();
+            stmt = conn.prepareStatement(SQL_DELETE);
+            stmt.setInt(1, id);
+            
+            if (stmt.executeUpdate() == 0) {
+                throw new DataAccessException("No se encontró el funcionario con ID: " + id + " para eliminar.");
+            }
+            
         } catch (SQLException e) {
-            throw new DataAccessException("Error al eliminar funcionario", e);
+            throw new DataAccessException("Error al eliminar funcionario con ID: " + id, e);
+        } finally {
+            DBConnection.close(stmt);
+            DBConnection.close(conn);
         }
     }
 }

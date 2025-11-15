@@ -1,7 +1,14 @@
-USE gestion_funcionarios;
+USE db_funcionarios;
 
-INSERT INTO funcionario (tipo_identificacion, numero_identificacion, nombres, apellidos, estado_civil, sexo, direccion, telefono, fecha_nacimiento)
-VALUES
-('CC', '10101010', 'María', 'Pérez', 'Casada', 'F', 'Calle 10 #20-30', '3101112222', '1988-04-10'),
-('CC', '20202020', 'Juan', 'Gómez', 'Soltero', 'M', 'Cra 5 #15-22', '3113334444', '1992-09-22'),
-('CC', '30303030', 'Luisa', 'Ramírez', 'Soltera', 'F', 'Av 45 #12-10', '3125556666', '1995-01-10');
+INSERT INTO tipo_documento (id_tipo_documento, nombre) VALUES 
+(1, 'Cédula de Ciudadanía'),
+(2, 'Tarjeta de Identidad'),
+(3, 'Cédula de Extranjería'),
+(4, 'Pasaporte');
+
+INSERT INTO estado_civil (id_estado_civil, nombre) VALUES 
+(1, 'Soltero(a)'),
+(2, 'Casado(a)'),
+(3, 'Unión Libre'),
+(4, 'Divorciado(a)'),
+(5, 'Viudo(a)');

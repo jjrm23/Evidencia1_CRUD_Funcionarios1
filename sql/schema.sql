@@ -1,37 +1,47 @@
-CREATE DATABASE IF NOT EXISTS gestion_funcionarios;
-USE gestion_funcionarios;
+CREATE DATABASE IF NOT EXISTS db_funcionarios;
+USE db_funcionarios;
 
-DROP TABLE IF EXISTS academico;
-DROP TABLE IF EXISTS grupo_familiar;
-DROP TABLE IF EXISTS funcionario;
-
-CREATE TABLE funcionario (
-  id_funcionario INT AUTO_INCREMENT PRIMARY KEY,
-  tipo_identificacion VARCHAR(5) NOT NULL,
-  numero_identificacion VARCHAR(20) NOT NULL UNIQUE,
-  nombres VARCHAR(100) NOT NULL,
-  apellidos VARCHAR(100) NOT NULL,
-  estado_civil VARCHAR(20),
-  sexo CHAR(1),
-  direccion VARCHAR(150),
-  telefono VARCHAR(20),
-  fecha_nacimiento DATE
+CREATE TABLE IF NOT EXISTS tipo_documento (
+    id_tipo_documento INT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL UNIQUE
 );
 
-CREATE TABLE grupo_familiar (
-  id_familiar INT AUTO_INCREMENT PRIMARY KEY,
-  id_funcionario INT,
-  nombre VARCHAR(100),
-  parentesco VARCHAR(50),
-  fecha_nacimiento DATE,
-  CONSTRAINT fk_fam FOREIGN KEY (id_funcionario) REFERENCES funcionario(id_funcionario) ON DELETE CASCADE
+CREATE TABLE IF NOT EXISTS estado_civil (
+    id_estado_civil INT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL UNIQUE
 );
 
-CREATE TABLE academico (
-  id_academico INT AUTO_INCREMENT PRIMARY KEY,
-  id_funcionario INT,
-  universidad VARCHAR(100),
-  nivel_estudio VARCHAR(50),
-  titulo VARCHAR(100),
-  CONSTRAINT fk_acad FOREIGN KEY (id_funcionario) REFERENCES funcionario(id_funcionario) ON DELETE CASCADE
+CREATE TABLE IF NOT EXISTS funcionario (
+    id_funcionario INT PRIMARY KEY AUTO_INCREMENT,
+    nombre VARCHAR(100) NOT NULL,
+    apellido VARCHAR(100) NOT NULL,
+    numero_documento VARCHAR(20) NOT NULL UNIQUE,
+    fecha_nacimiento DATE,
+    direccion VARCHAR(150),
+    telefono VARCHAR(15),
+    email VARCHAR(100),
+    id_tipo_documento INT NOT NULL,
+    id_estado_civil INT NOT NULL,
+    
+    FOREIGN KEY (id_tipo_documento) REFERENCES tipo_documento(id_tipo_documento),
+    FOREIGN KEY (id_estado_civil) REFERENCES estado_civil(id_estado_civil)
+);
+
+CREATE TABLE IF NOT EXISTS formacion_academica (
+    id_formacion INT PRIMARY KEY AUTO_INCREMENT,
+    id_funcionario INT NOT NULL,
+    nivel_academico VARCHAR(50),
+    institucion VARCHAR(100),
+    fecha_graduacion DATE,
+    
+    FOREIGN KEY (id_funcionario) REFERENCES funcionario(id_funcionario) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS grupo_familiar (
+    id_familiar INT PRIMARY KEY AUTO_INCREMENT,
+    id_funcionario INT NOT NULL,
+    nombre_familiar VARCHAR(100) NOT NULL,
+    parentesco VARCHAR(50),
+    
+    FOREIGN KEY (id_funcionario) REFERENCES funcionario(id_funcionario) ON DELETE CASCADE
 );

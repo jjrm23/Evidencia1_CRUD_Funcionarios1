@@ -1,0 +1,19 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "MainFrame",
+            "request": "launch",
+            "mainClass": "ui.MainFrame",
+            "projectName": "Evidencia1_CRUD_Funcionarios_641ec25f"
+        },
+        {
+            "type": "java",
+            "name": "Launch Funcionario App",
+            "request": "launch",
+            "mainClass": "ui.MainFrame",
+            "projectName": "Evidencia1_CRUD_Funcionarios"
+        }
+    ]
+}

@@ -1,37 +1,51 @@
 package model;
 
-import java.time.LocalDate;
-
 public class GrupoFamiliar {
-    private int id;
-    private int idFuncionario;
-    private String nombre;
+    private int idFamiliar;
+    private int idFuncionario; // Clave foránea
+    private String nombreFamiliar;
     private String parentesco;
-    private LocalDate fechaNacimiento;
 
-    public GrupoFamiliar() {}
-
-    public GrupoFamiliar(int id, int idFuncionario, String nombre, String parentesco, LocalDate fechaNacimiento) {
-        this.id = id;
-        this.idFuncionario = idFuncionario;
-        this.nombre = nombre;
-        this.parentesco = parentesco;
-        this.fechaNacimiento = fechaNacimiento;
+    public GrupoFamiliar() {
     }
 
-    // Getters y Setters
-    public int getId() { return id; }
-    public void setId(int id) { this.id = id; }
+    public GrupoFamiliar(int idFuncionario, String nombreFamiliar, String parentesco) {
+        this.idFuncionario = idFuncionario;
+        this.nombreFamiliar = nombreFamiliar;
+        this.parentesco = parentesco;
+    }
 
-    public int getIdFuncionario() { return idFuncionario; }
-    public void setIdFuncionario(int idFuncionario) { this.idFuncionario = idFuncionario; }
+    // --- Getters y Setters ---
 
-    public String getNombre() { return nombre; }
-    public void setNombre(String nombre) { this.nombre = nombre; }
+    public int getIdFamiliar() {
+        return idFamiliar;
+    }
 
-    public String getParentesco() { return parentesco; }
-    public void setParentesco(String parentesco) { this.parentesco = parentesco; }
+    public void setIdFamiliar(int idFamiliar) {
+        this.idFamiliar = idFamiliar;
+    }
 
-    public LocalDate getFechaNacimiento() { return fechaNacimiento; }
-    public void setFechaNacimiento(LocalDate fechaNacimiento) { this.fechaNacimiento = fechaNacimiento; }
+    public int getIdFuncionario() {
+        return idFuncionario;
+    }
+
+    public void setIdFuncionario(int idFuncionario) {
+        this.idFuncionario = idFuncionario;
+    }
+
+    public String getNombreFamiliar() {
+        return nombreFamiliar;
+    }
+
+    public void setNombreFamiliar(String nombreFamiliar) {
+        this.nombreFamiliar = nombreFamiliar;
+    }
+
+    public String getParentesco() {
+        return parentesco;
+    }
+
+    public void setParentesco(String parentesco) {
+        this.parentesco = parentesco;
+    }
 }

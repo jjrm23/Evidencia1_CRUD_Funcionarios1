@@ -1,121 +1,145 @@
 package ui;
 
+import dao.DataAccessException;
 import dao.FuncionarioDAO;
 import dao.FuncionarioDAOImpl;
-import dao.DataAccessException;
 import model.Funcionario;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.time.format.DateTimeFormatter;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.List;
 
 public class MainFrame extends JFrame {
+
     private FuncionarioDAO funcionarioDAO;
-    private JTable table;
-    private DefaultTableModel model;
+    private JTable funcionarioTable;
+    private DefaultTableModel tableModel;
 
     public MainFrame() {
-        funcionarioDAO = new FuncionarioDAOImpl();
-
-        setTitle("Gestión de Funcionarios");
-        setSize(900, 500);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        // 1. Inicializar el DAO
+        this.funcionarioDAO = new FuncionarioDAOImpl();
+        
+        // 2. Configurar la ventana principal
+        setTitle("CRUD de Funcionarios - Patrón DAO y Excepciones");
+        setSize(800, 600);
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
+        
+        // 3. Inicializar componentes
+        initComponents();
+        
+        // 4. Cargar datos iniciales
+        cargarTabla();
+    }
 
-        model = new DefaultTableModel(
-                new Object[]{"ID", "Tipo ID", "Número ID", "Nombres", "Apellidos", "Estado Civil", "Sexo", "Dirección", "Teléfono", "Fecha Nac."}, 0
-        );
-        table = new JTable(model);
+    private void initComponents() {
+        setLayout(new BorderLayout());
 
-        JButton btnNuevo = new JButton("Nuevo");
+        // --- Configuración de la Tabla ---
+        String[] columnNames = {"ID", "Nombre", "Apellido", "Documento"};
+        tableModel = new DefaultTableModel(columnNames, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false; // Las celdas no son editables directamente
+            }
+        };
+        funcionarioTable = new JTable(tableModel);
+        add(new JScrollPane(funcionarioTable), BorderLayout.CENTER);
+
+        // --- Configuración de Botones (Panel Sur) ---
+        JPanel buttonPanel = new JPanel();
+        JButton btnCrear = new JButton("Crear");
         JButton btnEditar = new JButton("Editar");
         JButton btnEliminar = new JButton("Eliminar");
-        JButton btnActualizar = new JButton("Actualizar");
 
-        JPanel panelBotones = new JPanel();
-        panelBotones.add(btnNuevo);
-        panelBotones.add(btnEditar);
-        panelBotones.add(btnEliminar);
-        panelBotones.add(btnActualizar);
+        buttonPanel.add(btnCrear);
+        buttonPanel.add(btnEditar);
+        buttonPanel.add(btnEliminar);
+        add(buttonPanel, BorderLayout.SOUTH);
 
-        add(new JScrollPane(table), BorderLayout.CENTER);
-        add(panelBotones, BorderLayout.SOUTH);
-
-        btnNuevo.addActionListener(e -> abrirFormulario(null));
+        // --- Manejo de Eventos ---
+        btnCrear.addActionListener(e -> abrirFormulario(null));
         btnEditar.addActionListener(e -> editarFuncionario());
         btnEliminar.addActionListener(e -> eliminarFuncionario());
-        btnActualizar.addActionListener(e -> cargarFuncionarios());
-
-        cargarFuncionarios();
     }
 
-    private void abrirFormulario(Funcionario funcionario) {
-        FuncionarioForm form = new FuncionarioForm(this, funcionarioDAO, funcionario);
+    public void cargarTabla() {
+        // Limpiar tabla
+        tableModel.setRowCount(0);
+        try {
+            List<Funcionario> funcionarios = funcionarioDAO.listar();
+            for (Funcionario f : funcionarios) {
+                Object[] row = new Object[]{
+                    f.getIdFuncionario(), 
+                    f.getNombre(), 
+                    f.getApellido(), 
+                    f.getNumeroDocumento()
+                };
+                tableModel.addRow(row);
+            }
+        } catch (DataAccessException ex) {
+            JOptionPane.showMessageDialog(this, "Error al listar funcionarios: " + ex.getMessage(), "Error de Conexión", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+        }
+    }
+    
+    private void abrirFormulario(Funcionario f) {
+        FuncionarioForm form = new FuncionarioForm(f, this);
         form.setVisible(true);
-        cargarFuncionarios();
     }
-
+    
     private void editarFuncionario() {
-        int fila = table.getSelectedRow();
-        if (fila == -1) {
-            JOptionPane.showMessageDialog(this, "Seleccione un funcionario", "Aviso", JOptionPane.WARNING_MESSAGE);
+        int selectedRow = funcionarioTable.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Seleccione un funcionario para editar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        Funcionario f = new Funcionario();
-        f.setId((int) model.getValueAt(fila, 0));
-        f.setTipoIdentificacion((String) model.getValueAt(fila, 1));
-        f.setNumeroIdentificacion((String) model.getValueAt(fila, 2));
-        f.setNombres((String) model.getValueAt(fila, 3));
-        f.setApellidos((String) model.getValueAt(fila, 4));
-        f.setEstadoCivil((String) model.getValueAt(fila, 5));
-        f.setSexo((String) model.getValueAt(fila, 6));
-        f.setDireccion((String) model.getValueAt(fila, 7));
-        f.setTelefono((String) model.getValueAt(fila, 8));
-        abrirFormulario(f);
+        int id = (int) tableModel.getValueAt(selectedRow, 0);
+        try {
+            Funcionario f = funcionarioDAO.obtenerPorId(id);
+            if (f != null) {
+                abrirFormulario(f);
+            } else {
+                JOptionPane.showMessageDialog(this, "Funcionario no encontrado.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (DataAccessException ex) {
+            JOptionPane.showMessageDialog(this, "Error al obtener datos: " + ex.getMessage(), "Error de BD", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void eliminarFuncionario() {
-        int fila = table.getSelectedRow();
-        if (fila == -1) {
-            JOptionPane.showMessageDialog(this, "Seleccione un funcionario", "Aviso", JOptionPane.WARNING_MESSAGE);
+        int selectedRow = funcionarioTable.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Seleccione un funcionario para eliminar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        int id = (int) model.getValueAt(fila, 0);
-        int confirm = JOptionPane.showConfirmDialog(this, "¿Desea eliminar este funcionario?", "Confirmar", JOptionPane.YES_NO_OPTION);
+        int id = (int) tableModel.getValueAt(selectedRow, 0);
+        int confirm = JOptionPane.showConfirmDialog(this, "¿Está seguro de eliminar el funcionario con ID: " + id + "?", "Confirmar Eliminación", JOptionPane.YES_NO_OPTION);
+
         if (confirm == JOptionPane.YES_OPTION) {
             try {
                 funcionarioDAO.eliminar(id);
-                cargarFuncionarios();
-                JOptionPane.showMessageDialog(this, "Funcionario eliminado correctamente");
-            } catch (DataAccessException e) {
-                JOptionPane.showMessageDialog(this, "Error al eliminar: " + e.getMessage());
+                JOptionPane.showMessageDialog(this, "Funcionario eliminado exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                cargarTabla(); // Recargar la tabla
+            } catch (DataAccessException ex) {
+                JOptionPane.showMessageDialog(this, "Error al eliminar: " + ex.getMessage(), "Error de BD", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
-    public void cargarFuncionarios() {
-        model.setRowCount(0);
-        try {
-            List<Funcionario> lista = funcionarioDAO.listar();
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-            for (Funcionario f : lista) {
-                model.addRow(new Object[]{
-                        f.getId(), f.getTipoIdentificacion(), f.getNumeroIdentificacion(),
-                        f.getNombres(), f.getApellidos(), f.getEstadoCivil(), f.getSexo(),
-                        f.getDireccion(), f.getTelefono(),
-                        f.getFechaNacimiento() != null ? f.getFechaNacimiento().format(formatter) : ""
-                });
-            }
-        } catch (DataAccessException e) {
-            JOptionPane.showMessageDialog(this, "Error al cargar funcionarios: " + e.getMessage());
-        }
-    }
-
+    
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new MainFrame().setVisible(true));
+        
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                new MainFrame().setVisible(true);
+            }
+        });
     }
 }
